@@ -2,6 +2,7 @@
     Author: Moustafa Alzantot (malzantot@ucla.edu)
     All rights reserved.
 """
+import os, sys
 import numpy as np
 import sys
 import tensorflow as tf
@@ -47,6 +48,15 @@ def crossover(x1, x2):
             ba2[i] = ba1[i]
     return bytes(ba2)
 
+def refine(x_new, x_orig, limit=10):
+    ba_new = bytearray(x_new)
+    ba_orig = bytearray(x_orig)
+    for i in range(header_len, len(x_new)):
+        # if np.random.random() < 0.5:
+        ba_new[i] = min(ba_orig[i]+limit, max(ba_orig[i]-limit, ba_new[i]))
+        ba_new[i] = min(255, max(0, ba_new[i]))
+    return bytes(ba_new)
+
 def mutation(x):
     ba = bytearray(x)
     for i in range(header_len, len(x)):
@@ -61,78 +71,79 @@ def score(sess, x, target, input_tensor, output_tensor):
         feed_dict={input_tensor: x})
     return output_preds[target]
 
+def generate_attack(x_orig, target, limit, sess, input_node,
+    output_node, max_iters):
+    pop_size = 20
+    elite_size = 2
+    refine_every = 5
+    temp = 0.01
+    initial_pop = [gen_population_member(x_orig) for _ in range(pop_size)]
+    for idx in range(max_iters):
+        if idx > 0 and idx % refine_every == 0:
+            initial_pop = [refine(x, x_orig,limit=limit) for x in initial_pop]
+        pop_scores = np.array([score(sess, x, target, input_node, output_node) for x in initial_pop])
+        pop_ranks = list(reversed(np.argsort(pop_scores)))
+        elite_set = [initial_pop[x] for x in pop_ranks[:elite_size]]
+        top_attack = initial_pop[pop_ranks[0]]
+        scores_logits = np.exp(pop_scores/temp)
+        pop_probs = scores_logits / np.sum(scores_logits)
+        child_set = [crossover(
+            initial_pop[np.random.choice(pop_size, p=pop_probs)],
+            initial_pop[np.random.choice(pop_size, p=pop_probs)])
+            for _ in range(pop_size - elite_size)]
+        initial_pop = elite_set + [mutation(child) for child in child_set]
+    return top_attack
+        
+def save_audiofile(output, filename):        
+    with open(filename, 'wb') as fh:
+        fh.write(output)
+
+def load_audiofile(filename):
+    with open(filename, 'rb') as fh:
+        return fh.read()
+
+flags = tf.flags
+flags.DEFINE_string("data_dir", "", "Data dir")
+flags.DEFINE_string("output_dir", "", "Data dir")
+flags.DEFINE_string("target_label", "", "Target classification label")
+flags.DEFINE_integer("limit", 4, "Noise limit")
+flags.DEFINE_string("graph_path", "", "Path to frozen graph file.")
+flags.DEFINE_string("labels_path", "", "Path to labels file.")
+flags.DEFINE_integer("max_iters", 200, "Maxmimum number of iterations")
+FLAGS = flags.FLAGS
+
 if __name__ == '__main__':
-    wav_filename = 'speech_dataset/yes/ce49cb60_nohash_1.wav'
-    output_dir = 'output/'
-    graph_filename = 'frozen_graph/my_frozen_graph.pb'
-    labels_filename = 'ckpts/conv_labels.txt'
+    data_dir = FLAGS.data_dir
+    output_dir = FLAGS.output_dir
+    target_label = FLAGS.target_label
+    eps_limit = FLAGS.limit
+    graph_path = FLAGS.graph_path
+    labels_path = FLAGS.labels_path
+    max_iters = FLAGS.max_iters
     input_node_name = 'wav_data:0'
     output_node_name = 'labels_softmax:0'
 
-    # label_wav.label_wav(wav_filename, labels_filename, 
-    #    graph_filename, input_node_name, output_node_name, 7)
-    load_graph(graph_filename)
-    # write graph summary
-    # writer = tf.summary.FileWriter('my_log', tf.get_default_graph())
-    # writer.flush()
-    # writer.close()
+    labels = load_labels(labels_path)
 
-    labels = load_labels(labels_filename)
-    with open(wav_filename, 'rb') as wav_file:
-        wav_data = wav_file.read()
-        
-    with open(output_dir + 'attack_original.wav', 'wb') as fh:
-        fh.write(wav_data)
+    wav_files_list =\
+        [f for f in os.listdir(data_dir) if f.endswith(".wav")]
     
+    target_idx = [idx for idx in range(len(labels)) if labels[idx]==target_label]
+    if len(target_idx) == 0:
+        print("Target label not found.")
+        sys.exit(1)
+    target_idx = target_idx[0]
+
+    load_graph(graph_path)
+
     with tf.Session() as sess:
-        # mfcc_tensor = sess.graph.get_tensor_by_name('Mfcc:0')
-        output_tensor = sess.graph.get_tensor_by_name(output_node_name) 
-        output_pred, = sess.run(output_tensor, feed_dict = {
-            input_node_name: wav_data})
-        print_output(wav_data, labels)
-
-        pop_size = 20
-        elite_size = 2
-        target = 3 # 3 is no
-        max_iter = 200
-        refine_every = 10
-        initial_pop = [gen_population_member(wav_data) for _ in range(pop_size)]
-        print('Original target score = ' , score(sess, wav_data, target, input_node_name, output_tensor))
-        # print('Original target score = ' , score(sess, wav_data, target, input_node_name, output_tensor))
-        for idx in range(max_iter):
-            if idx % refine_every == 0:
-                print ("Refining population")
-                # initial_pop = [crossover(wav_data, x) for x in initial_pop]
-            pop_scores = np.array([score(sess, x, target, input_node_name, output_tensor) for x in initial_pop])
-            print(idx, np.max(pop_scores))            
-            pop_ranks = list(reversed(np.argsort(pop_scores)))
-            elite_set = [initial_pop[x] for x in pop_ranks[:elite_size]]
-            top_attack = initial_pop[pop_ranks[0]]
-            temp = 0.01
-            scores_logits = np.exp(pop_scores/temp)
-            pop_probs = scores_logits / np.sum(scores_logits)
-            print('\r\t\t\t', idx, '    (', np.min(pop_probs), ' : ', np.max(pop_probs), ') ')
-            print(np.sum(pop_probs))
-
-            child_set = [crossover(
-                initial_pop[np.random.choice(pop_size, p=pop_probs)],
-                initial_pop[np.random.choice(pop_size, p=pop_probs)],
-
-            ) for _ in range(pop_size - elite_size)]
-            initial_pop = elite_set + [mutation(child) for child in child_set]
-            if idx % 50 == 0:
-                print('Orig score = %0.5f  - Target score = %0.5f' 
-                %(
-                score(sess, top_attack, 2, input_node_name, output_tensor),
-                score(sess, top_attack, target, input_node_name, output_tensor)
-
-                )
-                )
-                with open(output_dir + 'attack_%03d.wav' %idx, 'wb') as fh:
-                    fh.write(top_attack)
-
-        with open(output_dir + 'attack_final.wav', 'wb') as fh:
-            fh.write(top_attack)
+        output_node = sess.graph.get_tensor_by_name(output_node_name) 
+        for input_file in wav_files_list:
+            x_orig = load_audiofile(data_dir+'/'+input_file)
+            attack_output = generate_attack(x_orig, target_idx, eps_limit,
+                sess, input_node_name, output_node, max_iters)
+            save_audiofile(attack_output, output_dir+'/'+input_file)
+                
        
 
 
