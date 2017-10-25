@@ -158,8 +158,6 @@ if __name__ == '__main__':
             x_orig = load_audiofile(data_dir+'/'+input_file)
             x_pbs= int(x_orig[34])
             num_channels = int(x_orig[22])
-            print(int(x_orig[20]))
-            sys.exit(0)
             attack_output = generate_attack(x_orig, target_idx, eps_limit,
                 sess, input_node_name, output_node, max_iters, x_pbs, verbose)
             save_audiofile(attack_output, output_dir+'/'+input_file)

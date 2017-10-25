@@ -4,12 +4,12 @@ dataset_dir=$1
 labels_file=$2
 limit=$3
 max_iters=$4
-test_size=100
-frozen_graph=frozen_graph/my_frozen_graph.pb
+test_size=$5
+frozen_graph=ckpts/conv_actions_frozen.pb
 
-if [ $# -lt 2 ]
+if [ $# -lt 5 ]
     then
-    echo "Usage: $(basename $0) dataset_dir labels_file limit max_iters."
+    echo "Usage: $(basename $0) dataset_dir labels_file limit max_iters test_size."
     exit 1
 fi
 
