@@ -3,7 +3,9 @@ Author: Moustafa Alzantot (malzantot@ucla.edu)
 
 """
 
+import numpy as np
 import tensorflow as tf
+from speech_commands import label_wav
 import os, sys
 
 flags = tf.flags
@@ -25,11 +27,14 @@ def load_labels(filename):
 def load_audiofile(filename):
     with open(filename, 'rb') as fh:
         return fh.read()
+
 if __name__ == '__main__':
     output_dir = FLAGS.output_dir
     labels_file = FLAGS.labels_file
     graph_file = FLAGS.graph_file
     labels = load_labels(labels_file)
+    n_labels = len(labels)
+    result_mat = np.zeros((n_labels, n_labels))
     input_node_name = 'wav_data:0'
     output_node_name = 'labels_softmax:0'
     load_graph(graph_file)
@@ -41,8 +46,13 @@ if __name__ == '__main__':
                 if os.path.exists(case_dir):
                     wav_files =[format('%s/%s' %(case_dir, f)) for f in os.listdir(case_dir) if f.endswith('.wav')]
                     for wav_filename in wav_files:
-                        wav_data = load_audio_file(wav_filename)
+                        wav_data = load_audiofile(wav_filename)
                         preds = sess.run(output_node, feed_dict = {
                                 input_node_name: wav_data
                         })
+                        wav_pred = np.argmax(preds[0])
+                        if wav_pred == target_idx:
+                            result_mat[src_idx][wav_pred] += 1
+        print(result_mat)
+                        
 

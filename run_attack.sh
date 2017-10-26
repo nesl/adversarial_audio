@@ -1,23 +1,34 @@
 #!/bin/bash
 
+if [ $# -lt 5 ]
+    then
+    echo "Usage: $(basename $0) dataset_dir ckpts_dir limit max_iters test_size."
+    exit 1
+fi
 dataset_dir=$1
-labels_file=$2
+ckpts_dir=$2
 limit=$3
 max_iters=$4
 test_size=$5
-frozen_graph=ckpts/conv_actions_frozen.pb
 
-if [ $# -lt 5 ]
-    then
-    echo "Usage: $(basename $0) dataset_dir labels_file limit max_iters test_size."
+
+frozen_graph="$ckpts_dir/conv_actions_frozen.pb"
+labels_file="$ckpts_dir/conv_actions_labels.txt"
+
+if [ ! -d $ckpts_dir ]; then
+    echo "Checkpoints dir does not exist."
+    exit 1
+fi
+
+if [ ! -f $frozen_graph ]; then
+    echo "Frozen graph does not exist."
     exit 1
 fi
 
 if [ ! -f $labels_file ]; then
-    echo "Labels file doesnot exist."
+    echo "Labels file does not exist."
     exit 1
 fi
-
 labels_list=`cat $labels_file`
 sample_size=100
 

@@ -27,9 +27,9 @@ def print_output(output_preds, labels):
     print('----------------------')
 
 ################## GenAttack again ?
-
-header_len = 44
-mutation_p = 0.20
+# TODO(malzantot): any thoughts about byte ordering ?
+header_len = 44 + 1
+mutation_p = 0.15
 def gen_population_member(x_orig, bps=16):
     new_bytearray = bytearray(x_orig)
     step = 2
@@ -85,7 +85,7 @@ def score(sess, x, target, input_tensor, output_tensor):
 
 def generate_attack(x_orig, target, limit, sess, input_node,
     output_node, max_iters, bps=16, verbose=False):
-    pop_size = 20
+    pop_size = 10
     elite_size = 2
     refine_every = 5
     temp = 0.03
@@ -151,12 +151,13 @@ if __name__ == '__main__':
     target_idx = target_idx[0]
 
     load_graph(graph_path)
-
     with tf.Session() as sess:
         output_node = sess.graph.get_tensor_by_name(output_node_name) 
         for input_file in wav_files_list:
             x_orig = load_audiofile(data_dir+'/'+input_file)
-            x_pbs= int(x_orig[34])
+            #TODO(malzantot) fix
+            # x_pbs = 1
+            x_pbs=  int(x_orig[34])
             num_channels = int(x_orig[22])
             attack_output = generate_attack(x_orig, target_idx, eps_limit,
                 sess, input_node_name, output_node, max_iters, x_pbs, verbose)
