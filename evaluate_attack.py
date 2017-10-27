@@ -54,5 +54,6 @@ if __name__ == '__main__':
                         if wav_pred == target_idx:
                             result_mat[src_idx][wav_pred] += 1
         print(result_mat)
+        print(np.sum(result_mat))
                         
 
