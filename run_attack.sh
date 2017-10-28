@@ -34,7 +34,10 @@ sample_size=100
 
 
 # remove output dir if exists
-[ -d output ] && rm -rf "output/"
+if [ -d output ] ; then
+    echo "Output directory already exists ! "
+    exit 1
+fi
 mkdir output
 
 # Copy data files to output dir
