@@ -32,7 +32,7 @@ def print_output(output_preds, labels):
 header_len = 44
 data_max = 32767
 data_min = -32768
-mutation_p = 0.0001
+mutation_p = 0.0005
 
 def gen_population_member(x_orig, eps_limit):
     new_bytearray = bytearray(x_orig)
@@ -40,12 +40,11 @@ def gen_population_member(x_orig, eps_limit):
     # if bps == 8:
     step = 2
     for i in range(header_len, len(x_orig), step):
-        # if np.random.random() < mutation_p:
+        if np.random.random() < mutation_p:
         #    if np.random.random() < 0.5:
         #        new_bytearray[i] = min(255, new_bytearray[i]+1)
         #    else:
         #        new_bytearray[i] = max(0, new_bytearray[i]-1)
-        if np.random.random() < mutation_p:
             int_x = int.from_bytes(x_orig[i:i+2], byteorder='little', signed=True)
             new_int_x = min(data_max, max(data_min, int_x + np.random.choice(range(-eps_limit, eps_limit))))
             new_bytes = int(new_int_x).to_bytes(2, byteorder='little', signed=True)
@@ -97,22 +96,29 @@ def mutation(x, eps_limit):
 def score(sess, x, target, input_tensor, output_tensor):
     output_preds, = sess.run(output_tensor,
         feed_dict={input_tensor: x})
-    return output_preds[target]
+    return output_preds
 
 def generate_attack(x_orig, target, limit, sess, input_node,
     output_node, max_iters, eps_limit=256, verbose=False):
-    pop_size = 10
-    elite_size = 1
-    temp = 0.03
+    pop_size = 20
+    elite_size = 2
+    temp = 0.01
     initial_pop = [gen_population_member(x_orig, eps_limit) for _ in range(pop_size)]
     for idx in range(max_iters):
         pop_scores = np.array([score(sess, x, target, input_node, output_node) for x in initial_pop])
-        pop_ranks = list(reversed(np.argsort(pop_scores)))
+        target_scores = pop_scores[:, target]
+        pop_ranks = list(reversed(np.argsort(target_scores)))
         elite_set = [initial_pop[x] for x in pop_ranks[:elite_size]]
+        
         top_attack = initial_pop[pop_ranks[0]]
+        top_pred = np.argmax(pop_scores[pop_ranks[0],:])
         if verbose:
-            print("%03d -- %0.2f" %(idx+1, np.max(pop_scores)))
-        scores_logits = np.exp(pop_scores/temp)
+            if top_pred == target:
+                print("*** SUCCESS ****")
+        if top_pred == target:
+            return top_attack
+
+        scores_logits = np.exp(target_scores /temp)
         pop_probs = scores_logits / np.sum(scores_logits)
         child_set = [crossover(
             initial_pop[np.random.choice(pop_size, p=pop_probs)],
