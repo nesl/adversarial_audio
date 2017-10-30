@@ -2,5 +2,5 @@
 
 To run:
 ```
-./run_attack.sh speech_dataset/ ckpts/conv_labels.txt eps_limit max_iters
+./run_attack.sh dataset_dir ckpts_dir limit max_iters test_size
 ```
