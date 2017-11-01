@@ -280,7 +280,7 @@
 
 </table>
 ### Attack evaluation
-<img src='https://github.com/nesl/adversarial_audio/blob/gh-pages/figures/targeted_heatmap.png' />
+<img src='https://github.com/nesl/adversarial_audio/blob/gh-pages/figures/targeted_heatmap.png?raw=true' />
 
 ### Running the code
 
