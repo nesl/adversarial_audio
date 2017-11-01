@@ -1,6 +1,6 @@
 # Adversarial Speech Commands
 
-###Sample Targeted Attacks
+### Sample Targeted Attacks Outputs
 
 <style>
 	.wrong_cell {
