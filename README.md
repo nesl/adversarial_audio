@@ -25,6 +25,7 @@
 
 <tr>
 <td> YES </td>
+
 <td class="right_cell"><a href="demo_output/data/yes/30137d34_nohash_2.wav"><img src="https://cdn3.iconfinder.com/data/icons/pretty-office-part-9-shadow-style-2/256/Sound-on.png" width="16px" height="16px"/> </a>   </td>
 
 <td class="wrong_cell"><a href="demo_output/result/yes/no/30137d34_nohash_2.wav"><img src="https://cdn3.iconfinder.com/data/icons/pretty-office-part-9-shadow-style-2/256/Sound-on.png" width="16px" height="16px"/> </a>   </td>
