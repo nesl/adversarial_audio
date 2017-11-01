@@ -1,8 +1,6 @@
 # Adversarial Speech Commands
 
 ### Sample Targeted Attacks Outputs
-
-
 <style>
 	.wrong_cell {
 		background-color: #ff0000
@@ -11,7 +9,6 @@
     .right_cell {
     	background-color: #00ff00
     }
-
 
 </style>
 <table>
@@ -282,7 +279,10 @@
 </tr>
 
 </table>
+### Attack evaluation
+<img src='figures/targeted_heatmap.png' />
 
+### Running the code
 
 To run:
 ```
